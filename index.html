@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Char Table</title>
+  <style>
+    :root {
+      --bg:     #050c0a;
+      --bg2:    #091210;
+      --green:  #00ff8c;
+      --green2: #00cc6f;
+      --green3: #007a42;
+      --amber:  #ffb800;
+      --dim:    #1a3d30;
+      --text:   #a0ffd4;
+      --text2:  #4aad7a;
+      --red:    #ff6b6b;
+      --cyan:   #6be5ff;
+      --purple: #d4a8ff;
+      --blue:   #7ecfff;
+      --orange: #ffad5e;
+
+      --accent:      #00ff8c;
+      --accent-dim:  #007a42;
+      --accent-glow: #00ff8c44;
+      --accent-bg:   #003a22;
+    }
+
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::after {
+      content:'';
+      position:fixed; inset:0;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.18) 2px,rgba(0,0,0,.18) 4px);
+      pointer-events:none; z-index:200;
+    }
+
+    header {
+      border-bottom: 1px solid var(--accent-dim);
+      padding: 14px 24px;
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(90deg,#0a1f1a 0%,var(--bg) 100%);
+      transition: border-color .4s;
+    }
+    .logo {
+      font-size:1.1rem; font-weight:700; color:var(--accent);
+      letter-spacing:3px; text-shadow:0 0 12px var(--accent-glow);
+      transition: color .4s, text-shadow .4s;
+    }
+    .badge {
+      font-size:.62rem; background:var(--accent-dim); color:var(--accent);
+      padding:2px 8px; border-radius:2px; letter-spacing:2px;
+      transition: background .4s, color .4s;
+    }
+    .prompt-line {
+      margin-left:auto; font-size:.72rem; color:var(--text2);
+      animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink { 50%{opacity:0} }
+
+    .toolbar {
+      padding: 9px 24px;
+      display: flex; gap: 9px; align-items: center;
+      border-bottom: 1px solid var(--dim);
+      flex-wrap: wrap;
+    }
+    .toolbar label { font-size:.7rem; color:var(--text2); }
+
+    .toolbar input[type=text] {
+      background:#091812; border:1px solid var(--accent-dim);
+      color:var(--accent); font-family:inherit; font-size:.8rem;
+      padding:4px 10px; outline:none; width:210px;
+      transition: border-color .4s, color .4s;
+    }
+    .toolbar input:focus { border-color:var(--accent); box-shadow:0 0 6px var(--accent-glow); }
+
+    .sep { width:1px; height:20px; background:var(--dim); margin:0 2px; }
+
+    .btn {
+      font-family:inherit; font-size:.7rem;
+      background:transparent; border:1px solid var(--accent-dim);
+      color:var(--accent); padding:4px 12px; cursor:pointer;
+      letter-spacing:1px; transition:all .15s;
+    }
+    .btn:hover { background:var(--accent-dim); box-shadow:0 0 8px var(--accent-glow); }
+    .btn.active { background:var(--accent-bg); border-color:var(--accent); }
+    .btn:disabled { opacity:.3; cursor:default; }
+
+    /* ── SWITCH MODE DROPDOWN ── */
+    .mode-wrap { position:relative; display:inline-flex; align-items:center; }
+    .mode-select {
+      font-family:inherit; font-size:.72rem; cursor:pointer; letter-spacing:1px;
+      background: var(--accent-bg);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+      padding: 5px 28px 5px 12px;
+      outline:none; appearance:none; -webkit-appearance:none;
+      transition: background .3s, border-color .3s, box-shadow .3s, color .3s;
+    }
+    .mode-select:hover { box-shadow: 0 0 14px var(--accent-glow); }
+    .mode-select:focus { box-shadow: 0 0 14px var(--accent-glow); }
+    .mode-wrap::after { content:'▾'; position:absolute; right:9px; pointer-events:none; font-size:.7rem; color:var(--accent); transition:color .3s; }
+    /* current-mode pill */
+    .mode-pill {
+      font-size:.65rem; padding:3px 10px; border-radius:2px; letter-spacing:2px;
+      font-weight:700; white-space:nowrap; transition: all .3s;
+      background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    .main { padding:18px 24px; }
+
+    .section-label {
+      font-size:.62rem; letter-spacing:3px; color:var(--accent-dim);
+      margin-bottom:9px; display:flex; align-items:center; gap:8px;
+      transition: color .4s;
+    }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--dim); }
+
+    /* INFO PANEL */
+    .info-panel {
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:14px; margin-bottom:24px;
+    }
+    @media(max-width:700px){ .info-panel{grid-template-columns:1fr 1fr;} }
+
+    .info-card {
+      background:var(--bg2); border:1px solid var(--dim);
+      padding:13px; position:relative; overflow:hidden;
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .info-card:focus-within { border-color:var(--accent-dim); box-shadow:0 0 10px var(--accent-glow); }
+    .info-card::before {
+      content:''; position:absolute; top:0;left:0;right:0; height:2px;
+      background:linear-gradient(90deg,var(--accent-dim),transparent);
+      transition: background .4s;
+    }
+    .info-card .lbl {
+      font-size:.58rem; color:var(--text2); letter-spacing:2px;
+      margin-bottom:5px; display:flex; align-items:center; gap:5px;
+    }
+    .edit-hint { font-size:.52rem; color:var(--accent-dim); transition:color .4s; }
+
+    .val-input {
+      background:transparent; border:none; border-bottom:1px solid transparent;
+      color:var(--accent); font-family:inherit; font-size:1.25rem;
+      text-shadow:0 0 10px var(--accent-glow);
+      width:100%; outline:none; padding:0;
+      transition: border-color .2s, color .4s, text-shadow .4s;
+    }
+    .val-input.big { font-size:2rem; }
+    .val-input.sm  { font-size:.95rem; }
+    .val-input:focus { border-bottom-color:var(--accent-dim); }
+    .val-input.err {
+      color:var(--red)!important;
+      text-shadow:0 0 10px #ff6b6b44!important;
+      border-bottom-color:#ff6b6b55!important;
+    }
+    .val-input[readonly] { cursor:default; color:#555; text-shadow:none; font-size:.95rem; }
+
+    .card-sub { font-size:.65rem; color:var(--text2); margin-top:3px; }
+
+    .byte-chips { display:flex; gap:3px; flex-wrap:wrap; margin-top:7px; }
+    .byte-chip {
+      font-size:.65rem; padding:3px 6px; border-radius:2px;
+      background:#0d0d20; border:1px solid var(--accent-dim);
+      color:var(--cyan); transition:border-color .4s;
+    }
+    .byte-chip .bits { font-size:.52rem; color:#7a6aad; display:block; margin-top:1px; }
+
+    .hidden { display:none!important; }
+
+    /* LEGEND */
+    .legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:18px; font-size:.65rem; }
+    .legend-item { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--text2); transition:color .15s; }
+    .legend-item:hover { color:var(--text); }
+    .legend-dot { width:7px; height:7px; border-radius:50%; }
+
+    /* ASCII BAR */
+    .ascii-bar {
+      background:#0a1a14; border:1px solid var(--dim);
+      padding:9px 13px; font-size:.76rem; letter-spacing:1px;
+      line-height:1.8; word-break:break-all; color:var(--text2); margin-bottom:18px;
+    }
+    .ascii-bar span { cursor:pointer; transition:color .1s; }
+
+    /* ASCII HEX GRID */
+    .hex-grid {
+      display:grid; grid-template-columns:34px repeat(16,1fr);
+      gap:1px; font-size:.7rem; margin-bottom:24px;
+    }
+    .hex-col-hdr { text-align:center; color:var(--accent-dim); padding:2px 0; font-size:.6rem; transition:color .4s; }
+    .hex-row-addr { color:var(--amber); font-size:.62rem; line-height:22px; text-align:right; padding-right:5px; }
+    .hex-cell {
+      text-align:center; padding:2px 1px; border-radius:1px;
+      cursor:pointer; transition:background .1s,color .1s; line-height:18px;
+    }
+    .hex-cell:hover { background:#00ff8c18; color:var(--green); outline:1px solid var(--green3); }
+    .hex-cell.selected { background:#00ff8c28; color:var(--green); outline:1px solid var(--green); box-shadow:0 0 6px #00ff8c44; }
+    .cat-ctrl{color:var(--red)} .cat-print{color:var(--green)} .cat-ext{color:#666}
+    .cat-space{color:var(--cyan)} .cat-digit{color:var(--amber)}
+    .cat-upper{color:var(--purple)} .cat-lower{color:var(--blue)} .cat-punct{color:var(--orange)}
+
+    /* UNICODE GRID */
+    .utf-controls {
+      display:flex; gap:8px; align-items:center; margin-bottom:9px; flex-wrap:wrap;
+    }
+    .utf-controls select, .utf-controls input[type=text] {
+      background:#0a0a1a; border:1px solid var(--accent-dim);
+      color:var(--accent); font-family:inherit; font-size:.72rem;
+      padding:4px 8px; outline:none; transition:border-color .4s,color .4s;
+    }
+    .utf-controls select { max-width:280px; }
+    .utf-controls select:focus,.utf-controls input:focus { border-color:var(--accent); }
+    .rlbl { font-size:.65rem; color:var(--text2); }
+
+    .utf-grid {
+      display:grid; grid-template-columns:54px repeat(16,1fr);
+      gap:1px; font-size:.66rem; margin-bottom:24px;
+      max-height:420px; overflow-y:auto;
+      scrollbar-width:thin; scrollbar-color:var(--accent-dim) transparent;
+    }
+    .utf-col-hdr {
+      text-align:center; color:var(--accent-dim); padding:2px 0; font-size:.58rem;
+      position:sticky; top:0; background:var(--bg); z-index:1; transition:color .4s;
+    }
+    .utf-row-addr { color:var(--amber); font-size:.56rem; line-height:28px; text-align:right; padding-right:4px; }
+    .utf-cell {
+      text-align:center; padding:3px 1px; border-radius:1px;
+      cursor:pointer; transition:background .1s; line-height:22px;
+      font-size:1rem; min-height:28px; color:var(--accent);
+    }
+    .utf-cell:hover { background:rgba(255,255,255,.06); outline:1px solid var(--accent-dim); }
+    .utf-cell.selected { background:rgba(255,255,255,.1); outline:1px solid var(--accent); box-shadow:0 0 6px var(--accent-glow); }
+    .utf-cell.ctrl-cell { color:var(--red); font-size:.5rem; line-height:28px; }
+    .utf-cell.sur-cell  { color:#333; font-size:.5rem; cursor:default; }
+    .utf-cell.out-cell  { opacity:.06; cursor:default; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo" id="logo">ASCII</div>
+  <div class="badge" id="badge">CHAR TABLE v1</div>
+  <div class="prompt-line">█</div>
+</header>
+
+<div class="toolbar">
+  <label>SEARCH</label>
+  <input type="text" id="searchInput" placeholder="char, hex, dec, oct, bin, U+…" oninput="handleSearch()"/>
+  <div class="sep"></div>
+  <button class="btn active" onclick="setFilter('all')" id="btn-all">ALL</button>
+  <button class="btn" onclick="setFilter('print')" id="btn-print">PRINTABLE</button>
+  <button class="btn" onclick="setFilter('ctrl')" id="btn-ctrl">CONTROL</button>
+  <button class="btn" onclick="setFilter('ext')" id="btn-ext">EXTENDED</button>
+  <div class="sep"></div>
+
+  <label>SWITCH MODE</label>
+  <div class="mode-wrap">
+    <select class="mode-select" id="modeSelect" onchange="switchEncoding(this.selectedIndex)">
+      <option value="0">ASCII  (0 – 255)</option>
+      <option value="1">UTF-8  (Unicode)</option>
+      <option value="2">UTF-16 (Unicode)</option>
+      <option value="3">UTF-32 (Unicode)</option>
+    </select>
+  </div>
+  <div class="mode-pill" id="modePill">ASCII</div>
+</div>
+
+<div class="main">
+  <div class="section-label" id="infoLabel">CHAR INFO — type in any field to resolve</div>
+
+  <div class="info-panel">
+
+    <div class="info-card">
+      <div class="lbl">CHARACTER <span class="edit-hint">✎</span></div>
+      <input class="val-input big" id="dispChar" maxlength="2"
+        oninput="resolveChar(this)" onfocus="this.select()"/>
+      <div class="card-sub hidden" id="uniName"></div>
+    </div>
+
+    <div class="info-card">
+      <div class="lbl" id="lbl-dec">DECIMAL <span class="edit-hint">✎</span></div>
+      <input class="val-input" id="dispDec" oninput="resolveDec(this)" onfocus="this.select()"/>
+      <div class="card-sub" id="sub-dec">/ 255</div>
+    </div>
+
+    <div class="info-card">
+      <div class="lbl" id="lbl-hex">HEX <span class="edit-hint">✎</span></div>
+      <input class="val-input" id="dispHex" oninput="resolveHex(this)" onfocus="this.select()"/>
+      <div class="card-sub" id="sub-hex">OFFSET</div>
+    </div>
+
+    <div class="info-card">
+      <div class="lbl" id="lbl-bin">BINARY <span class="edit-hint">✎</span></div>
+      <input class="val-input sm" id="dispBin" oninput="resolveBin(this)" onfocus="this.select()"/>
+    </div>
+
+    <div class="info-card">
+      <div class="lbl">OCTAL <span class="edit-hint">✎</span></div>
+      <input class="val-input" id="dispOct" oninput="resolveOct(this)" onfocus="this.select()"/>
+    </div>
+
+    <div class="info-card">
+      <div class="lbl">CATEGORY</div>
+      <input class="val-input" id="dispCat" readonly tabindex="-1"/>
+    </div>
+
+    <!-- UTF-only cards -->
+    <div class="info-card hidden" id="card-enc-bytes">
+      <div class="lbl" id="lbl-enc-bytes">ENCODING BYTES <span class="edit-hint">✎ HEX</span></div>
+      <input class="val-input sm" id="dispEncBytes" placeholder="e.g. C3 A9"
+        oninput="resolveEncBytes(this)" onfocus="this.select()"/>
+      <div class="card-sub">space-separated hex bytes</div>
+    </div>
+
+    <div class="info-card hidden" id="card-enc-units">
+      <div class="lbl" id="lbl-enc-units">CODE UNITS</div>
+      <input class="val-input sm" id="dispEncUnits" readonly tabindex="-1"/>
+    </div>
+
+    <div class="info-card hidden" id="card-enc-info">
+      <div class="lbl" id="lbl-enc-info">ENCODING</div>
+      <input class="val-input sm" id="dispEncInfo" readonly tabindex="-1"/>
+      <div class="byte-chips" id="byteChips"></div>
+    </div>
+
+  </div>
+
+  <!-- ASCII sections -->
+  <div id="asciiSections">
+    <div class="section-label">LEGEND</div>
+    <div class="legend" id="legend"></div>
+    <div class="section-label">ASCII PRINTABLE</div>
+    <div class="ascii-bar" id="asciiBar"></div>
+    <div class="section-label">HEX GRID  0x00 – 0xFF</div>
+    <div class="hex-grid" id="hexGrid"></div>
+  </div>
+
+  <!-- Unicode sections -->
+  <div id="utfSections" class="hidden">
+    <div class="section-label">UNICODE BLOCK</div>
+    <div class="utf-controls">
+      <span class="rlbl">BLOCK:</span>
+      <select id="blockSelect" onchange="loadBlock()"></select>
+      <span class="rlbl">GO TO:</span>
+      <input type="text" id="goInput" placeholder="U+1F600 or 128512" style="width:130px"
+        onkeydown="if(event.key==='Enter')goTo()"/>
+      <button class="btn" onclick="goTo()">GO</button>
+    </div>
+    <div class="section-label" id="utf-grid-label">UNICODE GRID</div>
+    <div class="utf-grid" id="utfGrid"></div>
+  </div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ENCODING DEFINITIONS  (ASCII → UTF-8 → UTF-16 → UTF-32 → …)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const ENCODINGS = [
+  { id:'ascii',  label:'ASCII',   next:'UTF-8',   maxCp:255,      color:'#00ff8c', dim:'#007a42', glow:'#00ff8c44', bg:'#003a22' },
+  { id:'utf8',   label:'UTF-8',   next:'UTF-16',  maxCp:0x10FFFF, color:'#6be5ff', dim:'#1a5a7a', glow:'#6be5ff44', bg:'#001a2a' },
+  { id:'utf16',  label:'UTF-16',  next:'UTF-32',  maxCp:0x10FFFF, color:'#d4a8ff', dim:'#5a3a8a', glow:'#d4a8ff44', bg:'#150a2a' },
+  { id:'utf32',  label:'UTF-32',  next:'ASCII',   maxCp:0x10FFFF, color:'#ffad5e', dim:'#7a4a1a', glow:'#ffad5e44', bg:'#1a0a00' },
+];
+let encIdx = 0;
+let selectedCp = 65;
+let updating = false;
+let activeFilter = 'all';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ASCII CATEGORIES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const CAT = {
+  ctrl:  {label:'CONTROL',    color:'#ff6b6b'},
+  space: {label:'WHITESPACE', color:'#6be5ff'},
+  digit: {label:'DIGIT',      color:'#ffb800'},
+  upper: {label:'UPPERCASE',  color:'#d4a8ff'},
+  lower: {label:'LOWERCASE',  color:'#7ecfff'},
+  punct: {label:'PUNCT',      color:'#ffad5e'},
+  print: {label:'PRINTABLE',  color:'#00ff8c'},
+  ext:   {label:'EXTENDED',   color:'#555'},
+};
+const CTRL_NAMES = 'NUL SOH STX ETX EOT ENQ ACK BEL BS HT LF VT FF CR SO SI DLE DC1 DC2 DC3 DC4 NAK SYN ETB CAN EM SUB ESC FS GS RS US'.split(' ');
+
+function getCat(c) {
+  if (c<32||c===127) return 'ctrl';
+  if (c>=128) return 'ext';
+  if (c===32) return 'space';
+  if (c>=48&&c<=57)  return 'digit';
+  if (c>=65&&c<=90)  return 'upper';
+  if (c>=97&&c<=122) return 'lower';
+  if ((c>=33&&c<=47)||(c>=58&&c<=64)||(c>=91&&c<=96)||(c>=123&&c<=126)) return 'punct';
+  return 'print';
+}
+function ctrlName(c) { return c<32?CTRL_NAMES[c]:c===127?'DEL':null; }
+function asciiGlyph(c) {
+  if (c<32||c===127) return ctrlName(c)||'·';
+  if (c>=128) return '·';
+  return String.fromCharCode(c);
+}
+function cpGlyph(cp) {
+  if (cp<32||cp===127) return ctrlName(cp)||'·';
+  try { return String.fromCodePoint(cp); } catch(e) { return '?'; }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ENCODING MATH
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function cpToUtf8(cp) {
+  if (cp<0x80)    return [cp];
+  if (cp<0x800)   return [0xC0|(cp>>6), 0x80|(cp&0x3F)];
+  if (cp<0x10000) return [0xE0|(cp>>12), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F)];
+  return [0xF0|(cp>>18), 0x80|((cp>>12)&0x3F), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F)];
+}
+function utf8ToCp(bytes) {
+  if (!bytes.length) return null;
+  const b=bytes[0];
+  if (b<0x80)        return bytes.length===1?b:null;
+  if ((b&0xE0)===0xC0) return bytes.length===2?((b&0x1F)<<6)|(bytes[1]&0x3F):null;
+  if ((b&0xF0)===0xE0) return bytes.length===3?((b&0x0F)<<12)|((bytes[1]&0x3F)<<6)|(bytes[2]&0x3F):null;
+  if ((b&0xF8)===0xF0) return bytes.length===4?((b&0x07)<<18)|((bytes[1]&0x3F)<<12)|((bytes[2]&0x3F)<<6)|(bytes[3]&0x3F):null;
+  return null;
+}
+function cpToUtf16(cp) {
+  if (cp<0x10000) return [cp];
+  const s=cp-0x10000; return [0xD800|(s>>10), 0xDC00|(s&0x3FF)];
+}
+function utf16ToCp(words) {
+  if (words.length===1) return (words[0]>=0xD800&&words[0]<=0xDFFF)?null:words[0];
+  if (words.length===2) {
+    const h=words[0],l=words[1];
+    if (h>=0xD800&&h<=0xDBFF&&l>=0xDC00&&l<=0xDFFF) return 0x10000+((h-0xD800)<<10)+(l-0xDC00);
+  }
+  return null;
+}
+
+// Returns raw bytes for the current encoding (LE for UTF-16/32)
+function getEncBytes(cp) {
+  const e=ENCODINGS[encIdx];
+  if (e.id==='ascii') return [cp&0xFF];
+  if (e.id==='utf8')  return cpToUtf8(cp);
+  if (e.id==='utf16') return cpToUtf16(cp).flatMap(w=>[w&0xFF,(w>>8)&0xFF]);
+  if (e.id==='utf32') return [cp&0xFF,(cp>>8)&0xFF,(cp>>16)&0xFF,(cp>>24)&0xFF];
+}
+function getCodeUnitsLabel(cp) {
+  const e=ENCODINGS[encIdx];
+  if (e.id==='ascii') return '0x'+cp.toString(16).toUpperCase().padStart(2,'0');
+  if (e.id==='utf8')  return cpToUtf8(cp).map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+  if (e.id==='utf16') return cpToUtf16(cp).map(w=>'0x'+w.toString(16).toUpperCase().padStart(4,'0')).join(' ');
+  if (e.id==='utf32') return '0x'+cp.toString(16).toUpperCase().padStart(8,'0');
+}
+function getEncInfoLabel(cp) {
+  const e=ENCODINGS[encIdx];
+  if (e.id==='ascii') return cp<=127?'1 byte  (7-bit)':'1 byte  (extended)';
+  if (e.id==='utf8')  { const n=cpToUtf8(cp).length; return n+' byte'+(n>1?'s':''); }
+  if (e.id==='utf16') { const n=cpToUtf16(cp).length; return n+' code unit'+(n>1?'s':'')+' ('+n*2+' bytes)'; }
+  if (e.id==='utf32') return '1 code unit  (4 bytes)';
+}
+function parseBytesInput(str) {
+  const parts=str.trim().split(/\s+/);
+  const bytes=parts.map(p=>parseInt(p,16));
+  if (bytes.some(isNaN)||bytes.some(b=>b<0||b>255)) return null;
+  const e=ENCODINGS[encIdx];
+  if (e.id==='ascii') return bytes.length===1?bytes[0]:null;
+  if (e.id==='utf8')  return utf8ToCp(bytes);
+  if (e.id==='utf16') {
+    if (bytes.length%2!==0) return null;
+    const words=[];
+    for(let i=0;i<bytes.length;i+=2) words.push(bytes[i]|(bytes[i+1]<<8));
+    return utf16ToCp(words);
+  }
+  if (e.id==='utf32') {
+    if (bytes.length!==4) return null;
+    const cp=bytes[0]|(bytes[1]<<8)|(bytes[2]<<16)|(bytes[3]<<24);
+    return cp>=0&&cp<=0x10FFFF?cp:null;
+  }
+  return null;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  THEME
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function applyTheme() {
+  const e=ENCODINGS[encIdx], r=document.documentElement.style;
+  r.setProperty('--accent',     e.color);
+  r.setProperty('--accent-dim', e.dim);
+  r.setProperty('--accent-glow',e.glow);
+  r.setProperty('--accent-bg',  e.bg);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CYCLE ENCODING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function switchEncoding(idx) {
+  encIdx=idx;
+  const enc=ENCODINGS[encIdx];
+  const nxt=ENCODINGS[(encIdx+1)%ENCODINGS.length];
+
+  applyTheme();
+  document.getElementById('logo').textContent='BINARY';
+  document.getElementById('modePill').textContent=enc.label;
+  document.getElementById('modeSelect').selectedIndex=encIdx;
+  document.getElementById('badge').textContent='CHAR TABLE v1';
+
+  const isUni=enc.id!=='ascii';
+  document.querySelectorAll('#btn-all,#btn-print,#btn-ctrl,#btn-ext').forEach(b=>{ b.disabled=isUni; });
+  document.getElementById('asciiSections').classList.toggle('hidden',isUni);
+  document.getElementById('utfSections').classList.toggle('hidden',!isUni);
+  ['card-enc-bytes','card-enc-units','card-enc-info'].forEach(id=>
+    document.getElementById(id).classList.toggle('hidden',!isUni));
+
+  if (isUni) {
+    document.getElementById('lbl-dec').innerHTML='CODEPOINT DEC <span class="edit-hint">✎</span>';
+    document.getElementById('lbl-hex').innerHTML='U+ CODEPOINT <span class="edit-hint">✎</span>';
+    document.getElementById('lbl-bin').innerHTML='CODEPOINT BIN <span class="edit-hint">✎</span>';
+    document.getElementById('sub-dec').textContent='/ 1,114,111';
+    document.getElementById('sub-hex').textContent='UNICODE SCALAR';
+    document.getElementById('lbl-enc-bytes').innerHTML=enc.label+' BYTES <span class="edit-hint">✎ HEX</span>';
+    document.getElementById('lbl-enc-units').textContent=enc.label+' CODE UNITS';
+    document.getElementById('lbl-enc-info').textContent=enc.label+' ENCODING';
+    document.getElementById('uniName').classList.remove('hidden');
+    document.getElementById('infoLabel').textContent='UNICODE CHAR INFO — type in any field';
+    document.getElementById('dispChar').removeAttribute('maxlength');
+    if (!document.getElementById('ucell-'+selectedCp)) ensureBlock(selectedCp);
+  } else {
+    document.getElementById('lbl-dec').innerHTML='DECIMAL <span class="edit-hint">✎</span>';
+    document.getElementById('lbl-hex').innerHTML='HEX <span class="edit-hint">✎</span>';
+    document.getElementById('lbl-bin').innerHTML='BINARY <span class="edit-hint">✎</span>';
+    document.getElementById('sub-dec').textContent='/ 255';
+    document.getElementById('sub-hex').textContent='OFFSET';
+    document.getElementById('uniName').classList.add('hidden');
+    document.getElementById('infoLabel').textContent='CHAR INFO — type in any field to resolve';
+    document.getElementById('dispChar').setAttribute('maxlength','2');
+    if (selectedCp>255) selectedCp=65;
+    applyFilter();
+  }
+
+  updateGridHL();
+  fillFields(selectedCp,null);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  FILL INFO FIELDS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function setErr(el,on){ on?el.classList.add('err'):el.classList.remove('err'); }
+
+function fillFields(cp,skip) {
+  if(updating)return;
+  updating=true;
+  const isUni=ENCODINGS[encIdx].id!=='ascii';
+
+  if(skip!=='char'){const e=document.getElementById('dispChar');e.value=isUni?cpGlyph(cp):asciiGlyph(cp);setErr(e,false);}
+  if(skip!=='dec') {const e=document.getElementById('dispDec'); e.value=cp; setErr(e,false);}
+  if(skip!=='hex') {
+    const e=document.getElementById('dispHex');
+    e.value=isUni?'U+'+cp.toString(16).toUpperCase().padStart(4,'0'):'0x'+cp.toString(16).toUpperCase().padStart(2,'0');
+    setErr(e,false);
+  }
+  if(skip!=='bin') {
+    const e=document.getElementById('dispBin');
+    const bits=cp>0xFFFF?21:cp>0xFF?16:8;
+    e.value=cp.toString(2).padStart(bits,'0'); setErr(e,false);
+  }
+  if(skip!=='oct') {
+    const e=document.getElementById('dispOct');
+    e.value=(isUni?'':'0')+cp.toString(8).padStart(isUni?1:3,'0'); setErr(e,false);
+  }
+
+  // Category
+  const catEl=document.getElementById('dispCat');
+  if(cp<256){const ci=CAT[getCat(cp)];catEl.value=ci.label;catEl.style.color=ci.color;}
+  else if(cp>=0x1F000)         {catEl.value='EMOJI/SYMBOL';catEl.style.color='#ffad5e';}
+  else if(cp>=0x4E00&&cp<=0x9FFF){catEl.value='CJK IDEOGRAPH';catEl.style.color='#6be5ff';}
+  else if(cp>=0x3040&&cp<=0x30FF){catEl.value='KANA';catEl.style.color='#6be5ff';}
+  else if(cp>=0xAC00&&cp<=0xD7A3){catEl.value='HANGUL';catEl.style.color='#6be5ff';}
+  else if(cp>=0x0590&&cp<=0x05FF){catEl.value='HEBREW';catEl.style.color='#ffb800';}
+  else if(cp>=0x0600&&cp<=0x06FF){catEl.value='ARABIC';catEl.style.color='#ffb800';}
+  else if(cp>=0x0400&&cp<=0x04FF){catEl.value='CYRILLIC';catEl.style.color='#d4a8ff';}
+  else if(cp>=0x0900&&cp<=0x097F){catEl.value='DEVANAGARI';catEl.style.color='#ffad5e';}
+  else                            {catEl.value='UNICODE';catEl.style.color='#d4a8ff';}
+
+  if(isUni){
+    if(skip!=='encbytes'){
+      const e=document.getElementById('dispEncBytes');
+      e.value=getEncBytes(cp).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+      setErr(e,false);
+    }
+    document.getElementById('dispEncUnits').value=getCodeUnitsLabel(cp);
+    document.getElementById('dispEncInfo').value=getEncInfoLabel(cp);
+    // byte chips
+    const chips=document.getElementById('byteChips'); chips.innerHTML='';
+    getEncBytes(cp).forEach(b=>{
+      const d=document.createElement('div'); d.className='byte-chip';
+      d.innerHTML=b.toString(16).toUpperCase().padStart(2,'0')+'<span class="bits">'+b.toString(2).padStart(8,'0')+'</span>';
+      chips.appendChild(d);
+    });
+    document.getElementById('uniName').textContent=
+      'U+'+cp.toString(16).toUpperCase().padStart(4,'0')+'  •  '+getEncInfoLabel(cp);
+  }
+  updating=false;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SELECT CP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function selectCp(cp,skip){
+  ['cell-'+selectedCp,'ucell-'+selectedCp].forEach(id=>{
+    const el=document.getElementById(id); if(el)el.classList.remove('selected');
+  });
+  selectedCp=cp;
+  ['cell-'+cp,'ucell-'+cp].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.add('selected');el.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  });
+  fillFields(cp,skip);
+}
+function updateGridHL(){
+  document.querySelectorAll('.hex-cell.selected,.utf-cell.selected').forEach(c=>c.classList.remove('selected'));
+  const c=document.getElementById('cell-'+selectedCp)||document.getElementById('ucell-'+selectedCp);
+  if(c)c.classList.add('selected');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  RESOLVERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function resolveChar(el){
+  if(updating)return;
+  const v=el.value; if(!v)return;
+  const isUni=ENCODINGS[encIdx].id!=='ascii';
+  if(isUni){
+    const cp=v.codePointAt(0);
+    if(cp!==undefined&&cp<=0x10FFFF){setErr(el,false);ensureBlock(cp);selectCp(cp,'char');}
+    else setErr(el,true);
+    return;
+  }
+  if(v.length===1){const c=v.charCodeAt(0);if(c>=0&&c<256){setErr(el,false);selectCp(c,'char');}else setErr(el,true);}
+  else{const u=v.trim().toUpperCase();const idx=CTRL_NAMES.indexOf(u);
+    if(idx!==-1){setErr(el,false);selectCp(idx,'char');}
+    else if(u==='DEL'){setErr(el,false);selectCp(127,'char');}
+    else setErr(el,true);}
+}
+function resolveDec(el){
+  if(updating)return;
+  const v=el.value.trim(),cp=parseInt(v,10),max=ENCODINGS[encIdx].id==='ascii'?255:0x10FFFF;
+  if(!isNaN(cp)&&cp>=0&&cp<=max&&String(cp)===v){setErr(el,false);ensureBlock(cp);selectCp(cp,'dec');}
+  else if(v==='')setErr(el,false);else setErr(el,true);
+}
+function resolveHex(el){
+  if(updating)return;
+  const v=el.value.trim(),raw=v.replace(/^U\+/i,'').replace(/^0x/i,'');
+  const max=ENCODINGS[encIdx].id==='ascii'?255:0x10FFFF;
+  if(/^[0-9a-fA-F]{1,6}$/.test(raw)){
+    const cp=parseInt(raw,16);
+    if(cp>=0&&cp<=max){setErr(el,false);ensureBlock(cp);selectCp(cp,'hex');return;}
+  }
+  if(v===''||/^(U\+?|0x?)$/i.test(v))setErr(el,false);else setErr(el,true);
+}
+function resolveBin(el){
+  if(updating)return;
+  const v=el.value.trim(),max=ENCODINGS[encIdx].id==='ascii'?255:0x10FFFF;
+  if(/^[01]{1,21}$/.test(v)){const cp=parseInt(v,2);if(cp>=0&&cp<=max){setErr(el,false);ensureBlock(cp);selectCp(cp,'bin');return;}}
+  if(v==='')setErr(el,false);else setErr(el,true);
+}
+function resolveOct(el){
+  if(updating)return;
+  const v=el.value.trim(),max=ENCODINGS[encIdx].id==='ascii'?255:0x10FFFF;
+  if(/^0?[0-7]+$/.test(v)){const cp=parseInt(v,8);if(cp>=0&&cp<=max){setErr(el,false);ensureBlock(cp);selectCp(cp,'oct');return;}}
+  if(v==='')setErr(el,false);else setErr(el,true);
+}
+function resolveEncBytes(el){
+  if(updating)return;
+  const v=el.value.trim();
+  if(!v){setErr(el,false);return;}
+  const cp=parseBytesInput(v);
+  if(cp!==null&&cp>=0&&cp<=0x10FFFF){setErr(el,false);ensureBlock(cp);selectCp(cp,'encbytes');}
+  else setErr(el,true);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ASCII GRID & LEGEND
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const legendEl=document.getElementById('legend');
+Object.entries(CAT).forEach(([key,cat])=>{
+  const item=document.createElement('div'); item.className='legend-item';
+  item.innerHTML=`<div class="legend-dot" style="background:${cat.color}"></div>${cat.label}`;
+  item.onclick=()=>setFilter(key); legendEl.appendChild(item);
+});
+const asciiBar=document.getElementById('asciiBar');
+for(let i=32;i<=126;i++){
+  const s=document.createElement('span');
+  s.textContent=String.fromCharCode(i); s.style.color=CAT[getCat(i)].color;
+  s.onclick=()=>selectCp(i); asciiBar.appendChild(s);
+}
+const hexGrid=document.getElementById('hexGrid');
+hexGrid.appendChild(Object.assign(document.createElement('div'),{className:'hex-col-hdr'}));
+for(let c=0;c<16;c++){const h=document.createElement('div');h.className='hex-col-hdr';h.textContent=c.toString(16).toUpperCase();hexGrid.appendChild(h);}
+for(let row=0;row<16;row++){
+  const addr=document.createElement('div');addr.className='hex-row-addr';
+  addr.textContent=(row*16).toString(16).toUpperCase().padStart(2,'0');hexGrid.appendChild(addr);
+  for(let col=0;col<16;col++){
+    const cp=row*16+col,cat=getCat(cp),cell=document.createElement('div');
+    cell.className='hex-cell cat-'+cat;cell.id='cell-'+cp;
+    cell.textContent=cp.toString(16).toUpperCase().padStart(2,'0');
+    cell.title=asciiGlyph(cp)+' ('+cp+')'; cell.onclick=()=>selectCp(cp); hexGrid.appendChild(cell);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  UNICODE GRID
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const BLOCKS=[
+  {name:'Basic Latin (ASCII)',        start:0x0000,end:0x007F},
+  {name:'Latin-1 Supplement',        start:0x0080,end:0x00FF},
+  {name:'Latin Extended-A',          start:0x0100,end:0x017F},
+  {name:'Latin Extended-B',          start:0x0180,end:0x024F},
+  {name:'Greek & Coptic',            start:0x0370,end:0x03FF},
+  {name:'Cyrillic',                  start:0x0400,end:0x04FF},
+  {name:'Hebrew',                    start:0x0590,end:0x05FF},
+  {name:'Arabic',                    start:0x0600,end:0x06FF},
+  {name:'Devanagari',                start:0x0900,end:0x097F},
+  {name:'Thai',                      start:0x0E00,end:0x0E7F},
+  {name:'General Punctuation',       start:0x2000,end:0x206F},
+  {name:'Mathematical Operators',    start:0x2200,end:0x22FF},
+  {name:'Box Drawing',               start:0x2500,end:0x257F},
+  {name:'Miscellaneous Symbols',     start:0x2600,end:0x26FF},
+  {name:'Dingbats',                  start:0x2700,end:0x27FF},
+  {name:'Hiragana',                  start:0x3040,end:0x309F},
+  {name:'Katakana',                  start:0x30A0,end:0x30FF},
+  {name:'CJK Unified Ideographs',    start:0x4E00,end:0x4FFF},
+  {name:'Hangul Syllables',          start:0xAC00,end:0xAD00},
+  {name:'Emoticons (Emoji)',          start:0x1F600,end:0x1F64F},
+  {name:'Misc Symbols & Pictographs',start:0x1F300,end:0x1F5FF},
+  {name:'Transport & Map Symbols',   start:0x1F680,end:0x1F6FF},
+  {name:'Supplemental Symbols',      start:0x1F900,end:0x1F9FF},
+];
+const blockSelect=document.getElementById('blockSelect');
+BLOCKS.forEach((b,i)=>{
+  const o=document.createElement('option');o.value=i;
+  o.textContent='U+'+b.start.toString(16).toUpperCase().padStart(4,'0')+'  '+b.name;
+  blockSelect.appendChild(o);
+});
+function loadBlock(){const b=BLOCKS[parseInt(blockSelect.value)];buildUtfGrid(b.start,b.end);}
+function buildUtfGrid(start,end){
+  const g=document.getElementById('utfGrid');g.innerHTML='';
+  const rs=Math.floor(start/16)*16,re=Math.ceil((end+1)/16)*16;
+  document.getElementById('utf-grid-label').textContent=
+    'UNICODE GRID  U+'+start.toString(16).toUpperCase().padStart(4,'0')+' – U+'+end.toString(16).toUpperCase().padStart(4,'0');
+  g.appendChild(Object.assign(document.createElement('div'),{className:'utf-col-hdr'}));
+  for(let c=0;c<16;c++){const h=document.createElement('div');h.className='utf-col-hdr';h.textContent=c.toString(16).toUpperCase();g.appendChild(h);}
+  for(let base=rs;base<re;base+=16){
+    const addr=document.createElement('div');addr.className='utf-row-addr';
+    addr.textContent='U+'+base.toString(16).toUpperCase().padStart(4,'0');g.appendChild(addr);
+    for(let col=0;col<16;col++){
+      const cp=base+col,cell=document.createElement('div');
+      if(cp<start||cp>end){cell.className='utf-cell out-cell';cell.textContent='·';g.appendChild(cell);continue;}
+      if(cp>=0xD800&&cp<=0xDFFF){cell.className='utf-cell sur-cell';cell.textContent='SUR';g.appendChild(cell);continue;}
+      cell.id='ucell-'+cp;
+      if(cp<32||cp===127){cell.className='utf-cell ctrl-cell';cell.textContent=ctrlName(cp)||'·';}
+      else{cell.className='utf-cell';try{cell.textContent=String.fromCodePoint(cp);}catch(e){cell.textContent='?';}}
+      cell.title='U+'+cp.toString(16).toUpperCase().padStart(4,'0')+' ('+cp+')';
+      if(cp===selectedCp)cell.classList.add('selected');
+      cell.onclick=()=>selectCp(cp);g.appendChild(cell);
+    }
+  }
+}
+function ensureBlock(cp){
+  if(document.getElementById('ucell-'+cp))return;
+  let best=0;
+  for(let i=0;i<BLOCKS.length;i++){if(cp>=BLOCKS[i].start&&cp<=BLOCKS[i].end){best=i;break;}}
+  blockSelect.value=best;buildUtfGrid(BLOCKS[best].start,BLOCKS[best].end);
+}
+function goTo(){
+  let v=document.getElementById('goInput').value.trim();
+  let raw=v.replace(/^U\+/i,'').replace(/^0x/i,'');
+  let cp=/^[0-9a-fA-F]{1,6}$/.test(raw)?parseInt(raw,16):parseInt(v,10);
+  if(!isNaN(cp)&&cp>=0&&cp<=0x10FFFF){ensureBlock(cp);selectCp(cp);}
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  FILTER & SEARCH
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function setFilter(f){
+  activeFilter=f;
+  document.querySelectorAll('#btn-all,#btn-print,#btn-ctrl,#btn-ext').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('btn-'+f);if(btn)btn.classList.add('active');
+  applyFilter();
+}
+function applyFilter(){
+  for(let cp=0;cp<256;cp++){
+    const cell=document.getElementById('cell-'+cp);if(!cell)continue;
+    const cat=getCat(cp);let vis=true;
+    if(activeFilter==='print')vis=cat!=='ctrl'&&cat!=='ext';
+    else if(activeFilter==='ctrl')vis=cat==='ctrl';
+    else if(activeFilter==='ext')vis=cat==='ext';
+    else if(activeFilter!=='all')vis=cat===activeFilter;
+    cell.style.opacity=vis?'1':'0.12';
+  }
+}
+function handleSearch(){
+  const q=document.getElementById('searchInput').value.trim();
+  if(!q){if(ENCODINGS[encIdx].id==='ascii')applyFilter();return;}
+  let cp=null;
+  if(/^U\+[0-9a-f]+$/i.test(q))      cp=parseInt(q.slice(2),16);
+  else if(/^0b[01]+$/i.test(q))       cp=parseInt(q.slice(2),2);
+  else if(/^[01]{8}$/.test(q))        cp=parseInt(q,2);
+  else if(/^0x[0-9a-f]+$/i.test(q))   cp=parseInt(q,16);
+  else if(/^0[0-7]{1,6}$/.test(q))    cp=parseInt(q,8);
+  else if(/^\d+$/.test(q))            cp=parseInt(q,10);
+  else if(CTRL_NAMES.includes(q.toUpperCase()))cp=CTRL_NAMES.indexOf(q.toUpperCase());
+  else if(q.toUpperCase()==='DEL')    cp=127;
+  else if([...q].length===1)          cp=q.codePointAt(0);
+  if(cp!==null&&cp>=0&&cp<=0x10FFFF){
+    if(ENCODINGS[encIdx].id!=='ascii'){ensureBlock(cp);selectCp(cp);document.getElementById('ucell-'+cp)?.scrollIntoView({block:'center',behavior:'smooth'});}
+    else if(cp<256){selectCp(cp);document.getElementById('cell-'+cp)?.scrollIntoView({block:'center',behavior:'smooth'});}
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+applyTheme();
+setFilter('all');
+selectCp(65);
+</script>
+</body>
+</html>
